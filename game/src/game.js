@@ -376,7 +376,10 @@ function draw() {
 
 let last = performance.now();
 function frame(t) {
-  const dt = Math.min(0.033, (t - last) / 1000 || 0.016);
+  // Clamp both ways: a frame timestamp can predate `last` (it is the vsync
+  // time, captured before this script ran), and a negative dt would run every
+  // system backwards for a frame — including heat decay, which would ADD heat.
+  const dt = Math.max(0, Math.min(0.033, (t - last) / 1000 || 0.016));
   last = t;
   update(dt);
   draw();

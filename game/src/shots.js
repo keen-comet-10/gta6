@@ -28,11 +28,14 @@ export function stageShot(g, name) {
 
   if (name === 'chase') {
     // Mid-pursuit in Centro: three stars, PD on the tail, a delivery to finish.
+    // The bust meter starts deep in negative so the staged chase is captured
+    // mid-flight, not at the pin that ends it.
     const car = givePlayerCar(g, 1650, 1650, 0, '#d94f30');
-    car.speed = 215;
+    car.speed = 268;
     g.director.accept(g.hooks);
     if (g.director.active) g.director.active.stepIdx = 1; // on the delivery leg
     g.setHeat(265);
+    g.bust = -3.5;
     g.cash = 850;
     snapCamera(g);
   } else if (name === 'foot') {
