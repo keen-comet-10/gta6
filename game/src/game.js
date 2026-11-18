@@ -307,8 +307,11 @@ function update(dt) {
         if (car === p.car) { addHeat(HEAT.pedKill); sfx.crash(false); }
       }
     }
-    if (!p.car && (p.x - car.x) ** 2 + (p.y - car.y) ** 2 < 27 ** 2) {
-      const dmg = Math.abs(car.speed) * 0.16;
+    if (!p.car && (p.hurtCd || 0) <= 0 && (p.x - car.x) ** 2 + (p.y - car.y) ** 2 < 27 ** 2) {
+      // One hit per pass, capped: a car clips the player and throws them clear
+      // rather than grinding through their whole health bar in one contact.
+      const dmg = Math.min(16, Math.abs(car.speed) * 0.1);
+      p.hurtCd = 0.9;
       if (hurtPlayer(p, dmg)) return endRun(false);
       p.x += Math.cos(car.angle) * 26; p.y += Math.sin(car.angle) * 26;
       G.camera.shake = 9;
@@ -318,7 +321,7 @@ function update(dt) {
 
   // Police, heat, bust.
   maintainPolice(G.world, G.cops, rng, G.heat, p, G.now);
-  const target = { x: p.x, y: p.y, vx: p.car ? Math.cos(p.car.angle) * p.car.speed : 0, vy: p.car ? Math.sin(p.car.angle) * p.car.speed : 0 };
+  const target = { x: p.x, y: p.y, vx: p.car ? Math.cos(p.car.angle) * p.car.speed : 0, vy: p.car ? Math.sin(p.car.angle) * p.car.speed : 0, onFoot: !p.car };
   const pressure = updatePolice(G.world, G.cops, dt, target, G.heat <= 0);
   const playerSpeed = p.car ? Math.abs(p.car.speed) : p.speedNow;
   if (G.stars > 0 && pressure.nearest < POLICE.bustRange && playerSpeed < 34) {

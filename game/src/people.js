@@ -106,6 +106,7 @@ export function updatePlayerOnFoot(world, p, dt, axes, running) {
   }
   collideCircle(world, p, PLAYER.radius);
   if (p.punchCd > 0) p.punchCd -= dt;
+  if (p.hurtCd > 0) p.hurtCd -= dt;
   if (p.hurtFlash > 0) p.hurtFlash -= dt;
   return p.speedNow;
 }

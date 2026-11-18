@@ -79,8 +79,12 @@ export function updatePolice(world, cops, dt, target, standDown = false) {
     } else {
       const slowForTurn = Math.abs(steer) > 0.75 && d < 130;
       throttle = slowForTurn ? 0.25 : 1;
-      // Don't plough through the player at full tilt from point blank.
-      if (d < 52 && Math.abs(cop.speed) > 120) throttle = -0.7;
+      // Don't plough through the player at full tilt from point blank. A
+      // suspect on foot is there to be pinned, not killed: brake much
+      // earlier when the target is out of their car.
+      const brakeAt = target.onFoot ? 118 : 52;
+      const brakeSpeed = target.onFoot ? 85 : 120;
+      if (d < brakeAt && Math.abs(cop.speed) > brakeSpeed) throttle = -0.7;
     }
     driveCar(world, cop, dt, { throttle, steer });
   }
