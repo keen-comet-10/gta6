@@ -125,6 +125,26 @@ export function updateTraffic(world, cars, dt, rng) {
   }
 }
 
+// Keep the streets populated over a long session: a moving car that is wrecked
+// or has wandered far from the player is quietly replaced by a fresh one on a
+// distant road. Parked cars and the player's own car are never touched.
+export function recycleTraffic(world, cars, rng, playerPos) {
+  for (let i = cars.length - 1; i >= 0; i--) {
+    const car = cars[i];
+    if (car.driver !== 'ai') continue;
+    const far = (car.x - playerPos.x) ** 2 + (car.y - playerPos.y) ** 2 > 1250 ** 2;
+    if (!car.wrecked && !far) continue;
+    const route = newRoute(rng, playerPos.x + rng.range(-900, 900), playerPos.y + rng.range(-900, 900));
+    const p = lanePoint(route.axis, route.line, rng.range(120, CITY.size - 120), route.dir);
+    if ((p.x - playerPos.x) ** 2 + (p.y - playerPos.y) ** 2 < 480 ** 2) continue;
+    const fresh = makeCar(p.x, p.y, route.axis === 'v' ? (route.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (route.dir > 0 ? 0 : Math.PI), rng.pick(CAR_COLORS), rng.chance(0.14) ? 'taxi' : 'civil');
+    fresh.driver = 'ai';
+    fresh.route = route;
+    fresh.cruise = rng.range(120, 185);
+    cars[i] = fresh;
+  }
+}
+
 // Pairwise car contact: shove apart, trade speed, report the hardest hit so the
 // game can score rams, wrecks and heat. cb(a, b, force) fires on real impacts.
 export function collideCars(cars, cb) {

@@ -8,7 +8,7 @@ import { makeRng, clamp } from './random.js';
 import { initInput, down, hit, moveAxes, endFrame, pointer } from './input.js';
 import { initAudio, updateAudio, toggleMute, sfx } from './audio.js';
 import { buildWorld, districtAt } from './world.js';
-import { spawnTraffic, driveCar, updateTraffic, collideCars } from './vehicles.js';
+import { spawnTraffic, driveCar, updateTraffic, collideCars, recycleTraffic } from './vehicles.js';
 import { makePlayer, spawnPeds, updatePeds, updatePlayerOnFoot, hurtPlayer } from './people.js';
 import { maintainPolice, updatePolice, starsFor } from './police.js';
 import { MissionDirector } from './missions.js';
@@ -261,6 +261,8 @@ function update(dt) {
 
   // The city moves.
   updateTraffic(G.world, G.cars, dt, rng);
+  G.recycleAt = (G.recycleAt || 0) + dt;
+  if (G.recycleAt > 2.5) { G.recycleAt = 0; recycleTraffic(G.world, G.cars, rng, p); }
   const threats = [];
   for (const car of [...G.cars, ...G.cops]) if (Math.abs(car.speed) > 130) threats.push({ x: car.x, y: car.y, radius: 95 });
   if (p.punchT > 0) threats.push({ x: p.x, y: p.y, radius: 74 });
@@ -273,12 +275,16 @@ function update(dt) {
     burst((a.x + b.x) / 2, (a.y + b.y) / 2, '#ffe9a8', 7, 150, 4);
     if (playerInvolved) {
       const other = a === p.car ? b : a;
-      other.lastHitBy = 'player';
-      other.lastHitAt = G.now;
       sfx.crash(force > 150);
       G.camera.shake = Math.min(12, force * 0.045);
-      addHeat(other.kind === 'police' ? HEAT.policeRam : HEAT.carRam);
-      if (other.kind === 'police' && force > 150) hurtPlayer(p, 3);
+      // Heat and wreck credit belong to the aggressor: a cop or a commuter
+      // rear-ending a stationary player is their crime, not the player's.
+      if (Math.abs(p.car.speed) > 60) {
+        other.lastHitBy = 'player';
+        other.lastHitAt = G.now;
+        addHeat(other.kind === 'police' ? HEAT.policeRam : HEAT.carRam);
+        if (other.kind === 'police' && force > 150) hurtPlayer(p, 3);
+      }
     }
   });
   for (const car of G.cars) {
@@ -313,7 +319,7 @@ function update(dt) {
   // Police, heat, bust.
   maintainPolice(G.world, G.cops, rng, G.heat, p, G.now);
   const target = { x: p.x, y: p.y, vx: p.car ? Math.cos(p.car.angle) * p.car.speed : 0, vy: p.car ? Math.sin(p.car.angle) * p.car.speed : 0 };
-  const pressure = updatePolice(G.world, G.cops, dt, target);
+  const pressure = updatePolice(G.world, G.cops, dt, target, G.heat <= 0);
   const playerSpeed = p.car ? Math.abs(p.car.speed) : p.speedNow;
   if (G.stars > 0 && pressure.nearest < POLICE.bustRange && playerSpeed < 34) {
     G.bust += POLICE.bustFillPerSec * dt;

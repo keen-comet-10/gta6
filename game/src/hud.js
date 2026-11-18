@@ -123,6 +123,11 @@ function drawJobPanel(ctx, g) {
     title = d.active.def.title.toUpperCase();
     lines = [step.label];
     if (step.kind === 'wrecks') lines.push(`${d.active.wrecks} / ${step.count} wrecked`);
+    else {
+      const t = d.point(step.at);
+      const dist = Math.round(Math.hypot(g.player.x - t.x, g.player.y - t.y) / 10);
+      lines.push(`Target ${dist} m out — follow the gold light`);
+    }
     if (step.time || step.legTime) {
       const left = Math.max(0, (step.time || step.legTime) - d.active.stepTime);
       lines.push(`${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} left`);
