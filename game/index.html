@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Harbor: Solmaris Heat</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0d0518; height: 100%; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas {
+    width: min(100vw, 177.78vh);
+    height: min(56.25vw, 100vh);
+    display: block;
+    background: #1b1035;
+    box-shadow: 0 0 60px rgba(255, 46, 136, 0.25);
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720"></canvas>
+<script type="module" src="src/game.js"></script>
+</body>
+</html>
