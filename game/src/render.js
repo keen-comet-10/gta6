@@ -75,19 +75,25 @@ export function drawWorld(ctx, g, now) {
   for (const b of g.world.buildings) if (inView(b.x, b.y, b.w, b.h)) drawBuilding(ctx, b);
   for (const p of g.world.palms) if (inView(p.x - 20, p.y - 20, 40, 40)) drawPalm(ctx, p);
 
-  // Lamp glow pools along the streets.
-  ctx.fillStyle = 'rgba(255, 190, 90, 0.10)';
+  // Lamp glow: a tight warm pool at each corner, kept faint so it reads as
+  // streetlight on asphalt rather than a stain.
   for (const l of g.world.lamps) {
-    if (!inView(l.x - 30, l.y - 30, 60, 60)) continue;
-    ctx.beginPath(); ctx.arc(l.x, l.y, 30, 0, Math.PI * 2); ctx.fill();
+    if (!inView(l.x - 24, l.y - 24, 48, 48)) continue;
+    const grad = ctx.createRadialGradient(l.x, l.y, 2, l.x, l.y, 23);
+    grad.addColorStop(0, 'rgba(255, 196, 96, 0.20)');
+    grad.addColorStop(1, 'rgba(255, 196, 96, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(l.x, l.y, 23, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffd9a0';
+    ctx.fillRect(l.x - 1.6, l.y - 1.6, 3.2, 3.2);
   }
 
   for (const pk of g.pickups) drawPickup(ctx, pk, now);
   for (const ped of g.peds) if (inView(ped.x - 16, ped.y - 16, 32, 32)) drawPed(ctx, ped, now);
-  for (const car of g.cars) if (inView(car.x - 46, car.y - 46, 92, 92)) drawCar(ctx, car, now, false);
+  // The player's car lives in g.cars like any other, so this loop draws it too.
+  for (const car of g.cars) if (inView(car.x - 46, car.y - 46, 92, 92)) drawCar(ctx, car, now, car.kind === 'police');
   for (const cop of g.cops) if (inView(cop.x - 46, cop.y - 46, 92, 92)) drawCar(ctx, cop, now, true);
-  if (g.player.car) drawCar(ctx, g.player.car, now, g.player.car.kind === 'police');
-  else drawPlayer(ctx, g.player, now);
+  if (!g.player.car) drawPlayer(ctx, g.player, now);
 
   // Particles ride on top: sparks, smoke, cash sparkles.
   for (const pt of g.particles) {
@@ -117,6 +123,24 @@ function drawRoads(ctx, vx, vy) {
   }
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  // Zebra crossings on all four sides of each visible intersection.
+  ctx.fillStyle = PALETTE.crosswalk;
+  ctx.globalAlpha = 0.34;
+  const halfR = CITY.road / 2;
+  for (const cx of LINES) {
+    if (cx < vx - 80 || cx > vx + VIEW_W + 80) continue;
+    for (const cy of LINES) {
+      if (cy < vy - 80 || cy > vy + VIEW_H + 80) continue;
+      for (let s = -3; s <= 3; s++) {
+        if (s === 0) continue;
+        ctx.fillRect(cx + s * 12 - 4, cy - halfR - 13, 8, 9);
+        ctx.fillRect(cx + s * 12 - 4, cy + halfR + 4, 8, 9);
+        ctx.fillRect(cx - halfR - 13, cy + s * 12 - 4, 9, 8);
+        ctx.fillRect(cx + halfR + 4, cy + s * 12 - 4, 9, 8);
+      }
+    }
+  }
   ctx.globalAlpha = 1;
   // Pavement rims.
   ctx.strokeStyle = PALETTE.pavementEdge;
@@ -189,7 +213,9 @@ function drawBuilding(ctx, b) {
     ctx.fillStyle = b.neon;
     ctx.shadowColor = b.neon;
     ctx.shadowBlur = 9;
-    const label = b.sign.length * 7.4 > b.w ? b.sign.slice(0, Math.floor(b.w / 7.4)) : b.sign;
+    // Shrink the label only when the real measured width overflows the frontage.
+    let label = b.sign;
+    while (label.length > 3 && ctx.measureText(label).width > b.w - 8) label = label.slice(0, -1);
     ctx.fillText(label, b.x + b.w / 2, b.y + b.h - 7);
     ctx.shadowBlur = 0;
   }

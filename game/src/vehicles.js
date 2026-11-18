@@ -62,10 +62,12 @@ export function driveCar(world, car, dt, control) {
   if (car.wrecked) { car.speed = 0; return 0; }
   const throttle = clamp(control.throttle || 0, -1, 1);
   const steer = clamp(control.steer || 0, -1, 1);
-  if (throttle > 0) car.speed += CAR.accel * throttle * dt;
-  else if (throttle < 0) {
-    car.speed += (car.speed > 12 ? -CAR.brake : -CAR.reverse * 0.9) * -throttle * dt * (car.speed > 12 ? 1 : 1);
-    if (car.speed > 12) car.speed -= CAR.brake * -throttle * dt * 0; // braking handled above
+  if (throttle > 0) {
+    car.speed += CAR.accel * throttle * dt;
+  } else if (throttle < 0) {
+    // Pedal down while rolling forward is the brake; from a crawl it reverses.
+    if (car.speed > 12) car.speed -= CAR.brake * -throttle * dt;
+    else car.speed -= CAR.reverse * -throttle * dt;
   }
   car.speed -= car.speed * CAR.drag * dt;
   if (!throttle) car.speed -= Math.sign(car.speed) * Math.min(Math.abs(car.speed), 26 * dt);
