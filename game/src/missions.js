@@ -169,7 +169,8 @@ export class MissionDirector {
   // while no story job is active.
   updateFare(dt, g) {
     if (!this.fare) {
-      if (g.rng.chance(dt * 0.05) && g.playerInCar()) {
+      // Nobody flags down a driver the PD is actively hunting.
+      if (g.heat < 200 && g.rng.chance(dt * 0.05) && g.playerInCar()) {
         const spots = g.roadsidePoints();
         if (spots.length) {
           const s = g.rng.pick(spots);

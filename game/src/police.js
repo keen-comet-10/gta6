@@ -28,14 +28,18 @@ function spawnPoint(rng, player) {
 // Keep the fleet matched to the wanted level. Returns the live cop list.
 export function maintainPolice(world, cops, rng, heat, playerPos, now) {
   const want = heat <= 0 ? 0 : Math.min(POLICE.maxCars, starsFor(heat) + 1);
-  // Retire units that are wrecked, drowned or left far behind.
+  // Retire units that are wrecked, drowned or left far behind. When the heat
+  // dies altogether the hunt is called off: units peel away as soon as they
+  // are a few streets off, instead of shadowing a clean player forever.
   for (let i = cops.length - 1; i >= 0; i--) {
     const c = cops[i];
-    const far = Math.hypot(c.x - playerPos.x, c.y - playerPos.y) > 1150;
-    if ((c.wrecked && now - (c.wreckAt ?? now) > 4) || (far && want < cops.length)) {
+    const d = Math.hypot(c.x - playerPos.x, c.y - playerPos.y);
+    if (c.wrecked && c.wreckAt === undefined) c.wreckAt = now;
+    const calledOff = want === 0 && d > 330;
+    const surplus = want < cops.length && d > 1150;
+    if ((c.wrecked && now - (c.wreckAt ?? now) > 4) || calledOff || surplus) {
       cops.splice(i, 1);
     }
-    if (c.wrecked && c.wreckAt === undefined) c.wreckAt = now;
   }
   while (cops.length < want) {
     const s = spawnPoint(rng, playerPos);
@@ -48,8 +52,9 @@ export function maintainPolice(world, cops, rng, heat, playerPos, now) {
 }
 
 // Chase steering for one unit. Cops aim ahead of a moving target, hang back a
-// touch when alongside, and back out when wedged against the city.
-export function updatePolice(world, cops, dt, target) {
+// touch when alongside, and back out when wedged against the city. When the
+// hunt is called off (standDown), units turn away and cruise off instead.
+export function updatePolice(world, cops, dt, target, standDown = false) {
   let nearest = Infinity;
   let seeing = false;
   for (const cop of cops) {
@@ -59,8 +64,9 @@ export function updatePolice(world, cops, dt, target) {
     if (d < POLICE.sightRange) seeing = true;
 
     const lead = clamp(d / 300, 0, 1) * 0.55;
-    const aimX = target.x + (target.vx || 0) * lead;
-    const aimY = target.y + (target.vy || 0) * lead;
+    const away = standDown ? -1 : 1;
+    const aimX = target.x + (target.vx || 0) * lead * away + (standDown ? (cop.x - target.x) * 0.4 : 0);
+    const aimY = target.y + (target.vy || 0) * lead * away + (standDown ? (cop.y - target.y) * 0.4 : 0);
     const desired = Math.atan2(aimY - cop.y, aimX - cop.x);
     const steer = clamp(angleDelta(cop.angle, desired) * 2.6, -1, 1);
 
